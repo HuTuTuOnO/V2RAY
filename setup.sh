@@ -1,6 +1,6 @@
 #!/bin/bash
 # v2ray一键安装脚本
-# Author: 梯子博客<https://tizi.blog/>
+# Author: HuTuTuOnO
 
 
 RED="\033[31m"      # Error message
@@ -12,22 +12,18 @@ PLAIN='\033[0m'
 # 以下网站是随机从Google上找到的无广告小说网站，不喜欢请改成其他网址，以http或https开头
 # 搭建好后无法打开伪装域名，可能是反代小说网站挂了，请在网站留言，或者Github发issue，以便替换新的网站
 SITES=(
-http://www.zhuizishu.com/
-http://xs.56dyc.com/
-#http://www.xiaoshuosk.com/
-#https://www.quledu.net/
-http://www.ddxsku.com/
-http://www.biqu6.com/
-https://www.wenshulou.cc/
-#http://www.auutea.com/
-http://www.55shuba.com/
-http://www.39shubao.com/
-https://www.23xsw.cc/
-https://www.huanbige.com/
-https://www.jueshitangmen.info/
-https://www.zhetian.org/
-http://www.bequgexs.com/
-http://www.tjwl.com/
+	http://www.zhuizishu.com/
+	http://xs.56dyc.com/
+	http://www.ddxsku.com/
+	http://www.biqu6.com/
+	https://www.wenshulou.cc/
+	http://www.55shuba.com/
+	http://www.39shubao.com/
+	https://www.23xsw.cc/
+	https://www.jueshitangmen.info/
+	https://www.zhetian.org/
+	http://www.bequgexs.com/
+	http://www.tjwl.com/
 )
 
 CONFIG_FILE="/etc/v2ray/config.json"
@@ -393,11 +389,50 @@ getData() {
     fi
 
     if [[ "$TLS" = "true" || "$XTLS" = "true" ]]; then
-        PROXY_URL="https://86817.com/"
-        REMOTE_HOST=`echo ${PROXY_URL} | cut -d/ -f3`
-        colorEcho $BLUE " 伪装网站：$PROXY_URL"
-
-        echo ""
+		echo ""
+		colorEcho $BLUE " 请选择伪装站类型:"
+		echo "   1) 静态网站(位于/usr/share/nginx/html)"
+		echo "   2) 小说站(随机选择)"
+		echo "   3) 高清壁纸站(https://bing.ioliu.cn)"
+		echo "   4) 自定义反代站点(需以http或者https开头)"
+		read -p "  请选择伪装网站类型[默认:高清壁纸站]" answer
+		if [[ -z "$answer" ]]; then
+			PROXY_URL="https://bing.ioliu.cn"
+		else
+			case $answer in
+				1) PROXY_URL="" ;;
+				2)
+					len=${#SITES[@]}
+					((len--))
+					while true; do
+						index=$(shuf -i0-${len} -n1)
+						PROXY_URL=${SITES[$index]}
+						host=$(echo ${PROXY_URL} | cut -d/ -f3)
+						ip=$(curl -sm8 ipget.net/?ip=${host})
+						res=$(echo -n ${ip} | grep ${host})
+						if [[ "${res}" == "" ]]; then
+							echo "$ip $host" >>/etc/hosts
+							break
+						fi
+					done
+					;;
+				3) PROXY_URL="https://bing.ioliu.cn" ;;
+				4)
+					read -p " 请输入反代站点(以http或者https开头)：" PROXY_URL
+					if [[ -z "$PROXY_URL" ]]; then
+						colorEcho $RED " 请输入反代网站！"
+						exit 1
+					elif [[ "${PROXY_URL:0:4}" != "http" ]]; then
+						colorEcho $RED " 反代网站必须以http或https开头！"
+						exit 1
+					fi
+					;;
+				*) colorEcho $RED " 请输入正确的选项！" && exit 1 ;;
+			esac
+		fi
+		REMOTE_HOST=$(echo ${PROXY_URL} | cut -d/ -f3)
+		colorEcho $BLUE " 伪装网站：$PROXY_URL"
+		echo ""
         colorEcho $BLUE "  是否允许搜索引擎爬取网站？[默认：不允许]"
         echo "    y)允许，会有更多ip请求网站，但会消耗一些流量，vps流量充足情况下推荐使用"
         echo "    n)不允许，爬虫不会访问网站，访问ip比较单一，但能节省vps流量"
@@ -437,7 +472,7 @@ module_hotfixes=true' > /etc/yum.repos.d/nginx.repo
         fi
         $CMD_INSTALL nginx
         if [[ "$?" != "0" ]]; then
-            colorEcho $RED " Nginx安装失败，请到 https://tizi.blog/ 反馈"
+            colorEcho $RED " Nginx安装失败，请到 https://github.com/HuTuTuOnO/ 反馈"
             exit 1
         fi
         systemctl enable nginx
@@ -502,7 +537,7 @@ getCert() {
             ~/.acme.sh/acme.sh   --issue -d $DOMAIN --keylength ec-256 --pre-hook "nginx -s stop || { echo -n ''; }" --post-hook "nginx -c /www/server/nginx/conf/nginx.conf || { echo -n ''; }"  --standalone
         fi
         [[ -f ~/.acme.sh/${DOMAIN}_ecc/ca.cer ]] || {
-            colorEcho $RED " 获取证书失败，请复制上面的红色文字到 https://tizi.blog/ 反馈"
+            colorEcho $RED " 获取证书失败，请复制上面的红色文字到 https://github.com/HuTuTuOnO/ 反馈"
             exit 1
         }
         CERT_FILE="/etc/v2ray/${DOMAIN}.pem"
@@ -512,7 +547,7 @@ getCert() {
             --fullchain-file $CERT_FILE \
             --reloadcmd     "service nginx force-reload"
         [[ -f $CERT_FILE && -f $KEY_FILE ]] || {
-            colorEcho $RED " 获取证书失败，请到 https://tizi.blog/ 反馈"
+            colorEcho $RED " 获取证书失败，请到 https://github.com/HuTuTuOnO/ 反馈"
             exit 1
         }
     else
@@ -789,7 +824,7 @@ installV2ray() {
     cat >$SERVICE_FILE<<-EOF
 [Unit]
 Description=V2ray Service
-Documentation=https://tizi.blog/
+Documentation=https://github.com/HuTuTuOnO/
 After=network.target nss-lookup.target
 
 [Service]
@@ -1821,8 +1856,8 @@ menu() {
     clear
     echo "#############################################################"
     echo -e "#                   ${RED}v2ray一键安装脚本${PLAIN}        #"
-    echo -e "# ${GREEN}作者${PLAIN}: 梯子博客                           #"
-    echo -e "# ${GREEN}网址${PLAIN}: https://tizi.blog                 #"
+    echo -e "# ${GREEN}作者${PLAIN}: HuTuTuOnO                          #"
+    echo -e "# ${GREEN}网址${PLAIN}: https://github.com/HuTuTuOnO/      #"
     echo "#############################################################"
 
     echo -e "  ${GREEN}1.${PLAIN}   安装V2ray-VMESS"
