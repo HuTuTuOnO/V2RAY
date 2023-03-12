@@ -268,11 +268,19 @@ getData() {
             CERT_FILE="/etc/v2ray/${DOMAIN}.pem"
             KEY_FILE="/etc/v2ray/${DOMAIN}.key"
         else
-            # resolve=`curl -sL http://api.tizi.blog/hostip?domain=${DOMAIN}`
-            resolve=$(curl -sm8 ipget.net/?ip=${DOMAIN})
-            res=`echo -n ${resolve} | grep ${IP}`
-            if [[ -z "${res}" ]]; then
-                colorEcho ${BLUE}  "${DOMAIN} 解析结果：${resolve}"
+	    real_ip=`ping ${DOMAIN} -c 1 | sed '1{s/[^(]*(//;s/).*//;q}'`
+	    local_ip=`curl ipv4.icanhazip.com`
+	    #local_ip=`curl https://ipinfo.io/ip`
+	    #local_ip=`curl https://api.ip.sb/ip`
+	    #local_ip=`curl https://api.ipify.org`
+	    #local_ip=`curl https://ip.seeip.org`
+	    #local_ip=`curl https://ifconfig.co/ip`
+	    #local_ip=`curl https://api.myip.com | grep -oE "([0-9]{1,3}\.){3}[0-9]{1,3}"`
+	    #local_ip=`curl icanhazip.com`
+	    #local_ip=`curl myip.ipip.net | grep -oE "([0-9]{1,3}\.){3}[0-9]{1,3}"`	    
+            if [[ $real_ip == $local_ip ]] ; then
+                colorEcho ${BLUE}  "${DOMAIN} 解析结果：${real_ip}"
+	    else
                 colorEcho ${RED}  " 域名未解析到当前服务器IP(${IP})!"
                 exit 1
             fi
